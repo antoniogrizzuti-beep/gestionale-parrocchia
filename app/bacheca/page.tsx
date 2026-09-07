@@ -354,13 +354,13 @@ export default function BachecaChatPage() {
                     </span>
                   )}
 
-                  <input
-                    type="text"
-                    placeholder="Scrivi un messaggio al team..."
-                    value={testoMessaggio}
-                    onChange={(e) => setTestoMessaggio(e.target.value)}
-                    className="flex-1 px-4 py-2.5 bg-slate-100 border border-transparent rounded-xl text-xs outline-none focus:bg-white focus:border-blue-500 transition"
-                  />
+                 <input
+  type="text"
+  placeholder="Scrivi un messaggio al team..."
+  value={testoMessaggio}
+  onChange={(e) => setTestoMessaggio(e.target.value)}
+  className="flex-1 px-4 py-2.5 bg-slate-100 border border-transparent rounded-xl text-xs outline-none focus:bg-white focus:border-blue-500 transition"
+/>
                   <button
                     type="submit"
                     className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition shadow-sm cursor-pointer flex items-center justify-center"
