@@ -355,7 +355,6 @@ export default function BachecaChatPage() {
                   )}
 
                   <input
-                    text="text"
                     type="text"
                     placeholder="Scrivi un messaggio al team..."
                     value={testoMessaggio}

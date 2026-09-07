@@ -259,7 +259,6 @@ export default function IntenzioniPage() {
         titoloPagina="Intenzioni di Santa Messa"
         nomeParrocchia={nomeParrocchia} 
         codiceParrocchia={codiceParrocchia} 
-        userName={userName} 
         userRole={userRole} 
         veroRuolo={userRole} 
         listaUtenti={[]} 

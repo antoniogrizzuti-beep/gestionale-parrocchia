@@ -372,7 +372,6 @@ export default function HomePage() {
         }
         nomeParrocchia={nomeParrocchia} 
         codiceParrocchia={codiceParrocchia} 
-        userName={userName} 
         userRole={userRole} 
         veroRuolo={veroRuolo} 
         listaUtenti={listaUtenti} 

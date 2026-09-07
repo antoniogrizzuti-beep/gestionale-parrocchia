@@ -120,7 +120,7 @@ export default function CertificatoComunione() {
           <p className="leading-loose">
             nato/a a <span className="font-semibold underline decoration-dotted">{atto.luogo_nascita || '......................................'}</span> il <span className="font-semibold underline decoration-dotted">{dataNascitaFormatted}</span>, 
             regolarmente battezzato/a nella Parrocchia di <span className="font-semibold">{atto.chiesa_battesimo || '......................................'}</span> in data <span className="font-semibold underline decoration-dotted">{dataBattesimoFormatted}</span>, 
-            ha ricevuto per la prima volta il Santissimo Sacramento dell'Eucaristia (Prima Comunione) in questa Chiesa Parrocchiale (o presso <span className="font-semibold">{atto.chiesa_comunione || nomeParrocchia}</span>) in data <span className="font-semibold underline decoration-dotted">{dataComunioneFormatted}</span>.
+            ha ricevuto per la prima volta il Santissimo Sacramento dell'Eucaristia (Prima Comunione) in questa Chiesa Parrocchiale (o presso <span className="font-semibold">{atto.chiesa_comunione || parrocchia}</span>) in data <span className="font-semibold underline decoration-dotted">{dataComunioneFormatted}</span>.
           </p>
 
           {atto.ministro && (
