@@ -257,11 +257,6 @@ export default function IntenzioniPage() {
       <Header 
         isHome={false} 
         titoloPagina="Intenzioni di Santa Messa"
-        nomeParrocchia={nomeParrocchia} 
-        codiceParrocchia={codiceParrocchia} 
-        userRole={userRole} 
-        veroRuolo={userRole} 
-        listaUtenti={[]} 
       />
 
       <div className="max-w-5xl mx-auto px-6 pt-8 space-y-6">

@@ -370,11 +370,6 @@ export default function HomePage() {
           currentView === 'battesimi' ? "Registro dei Battesimi" :
           currentView === 'comunioni' ? "Registro delle Prime Comunioni" : undefined
         }
-        nomeParrocchia={nomeParrocchia} 
-        codiceParrocchia={codiceParrocchia} 
-        userRole={userRole} 
-        veroRuolo={veroRuolo} 
-        listaUtenti={listaUtenti} 
       />
 
       {/* LOGO E NOME PARROCCHIA */}
