@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -134,7 +136,7 @@ interface Comunione {
   ministro: string;
 }
 
-export default function HomePage() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentView = searchParams.get('view') || 'dashboard';
@@ -711,7 +713,7 @@ export default function HomePage() {
                 <p className="text-xs text-slate-500">Gestione repertorio canti e scalette delle messe</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-  
+ 
   {/* Intenzioni di Messa */}
   <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-between h-[160px]">
     <div className="flex items-center gap-3.5">
@@ -1085,5 +1087,13 @@ export default function HomePage() {
 
       </div>
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">Caricamento in corso...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
