@@ -2,179 +2,208 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { Printer, ArrowLeft, Church } from 'lucide-react';
 
-export default function CertificatoBattesimo() {
-  const searchParams = useSearchParams();
+interface BattesimoAtto {
+  id: string;
+  numero_atto: number | null;
+  nome: string;
+  cognome: string;
+  sesso: string;
+  data_nascita: string;
+  luogo_nascita: string;
+  data_battesimo: string;
+  luogo_battesimo: string;
+  ministro: string;
+  padre: string;
+  madre: string;
+  parrocchia_id?: string;
+}
+
+interface Parrocchia {
+  nome_parrocchia: string;
+  diocesi: string;
+  logo_url?: string;
+}
+
+function CertificatoBattesimoContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = searchParams.get('id');
 
-  const [atto, setAtto] = useState<any>(null);
-  const [parrocchia, setParrocchia] = useState<any>(null);
-  const [annotazioniList, setAnnotazioniList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [atto, setAtto] = useState<BattesimoAtto | null>(null);
+  const [parrocchia, setParrocchia] = useState<Parrocchia | null>(null);
 
   useEffect(() => {
-    if (id) fetchDatiCertificato();
+    if (id) {
+      fetchAttoEParrocchia(id);
+    } else {
+      setLoading(false);
+    }
   }, [id]);
 
-  async function fetchDatiCertificato() {
+  async function fetchAttoEParrocchia(attoId: string) {
     setLoading(true);
-    
-    const { data: battesimo } = await supabase
+    const { data: attoData, error: attoError } = await supabase
       .from('battesimi')
       .select('*')
-      .eq('id', id)
+      .eq('id', attoId)
       .single();
 
-    if (battesimo) {
-      setAtto(battesimo);
-      
-      const { data: parr } = await supabase
+    if (attoError || !attoData) {
+      alert('Atto di battesimo non trovato.');
+      setLoading(false);
+      return;
+    }
+
+    setAtto(attoData);
+
+    if (attoData.parrocchia_id) {
+      const { data: pData } = await supabase
         .from('parrocchie')
         .select('*')
-        .eq('id', battesimo.parrocchia_id)
+        .eq('id', attoData.parrocchia_id)
         .single();
-      if (parr) setParrocchia(parr);
-
-      const { data: annots } = await supabase
-        .from('battesimi_annotazioni')
+      if (pData) setParrocchia(pData);
+    } else {
+      const { data: pFallback } = await supabase
+        .from('parrocchie')
         .select('*')
-        .eq('battesimo_id', id)
-        .order('data_annotazione', { ascending: true });
-
-      if (annots) {
-        setAnnotazioniList(annots);
-      }
+        .limit(1)
+        .single();
+      if (pFallback) setParrocchia(pFallback);
     }
+
     setLoading(false);
   }
 
-  if (loading) return <div className="p-8 text-center text-sm">Generazione certificato in corso...</div>;
-  if (!atto) return <div className="p-8 text-center text-sm text-red-500">Atto non trovato.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">
+        Caricamento dati certificato in corso...
+      </div>
+    );
+  }
 
-  const dataNascitaFormatted = atto.data_nascita ? new Date(atto.data_nascita).toLocaleDateString('it-IT') : '________';
-  const dataBattesimoFormatted = atto.data_battesimo ? new Date(atto.data_battesimo).toLocaleDateString('it-IT') : '________';
+  if (!atto) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-700 gap-4">
+        <p className="text-sm">Nessun atto selezionato o record non trovato.</p>
+        <button
+          onClick={() => router.push('/?view=battesimi')}
+          className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition"
+        >
+          Torna al Registro
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6 flex flex-col items-center">
-      
-      <style jsx global>{`
-        @media print {
-          @page {
-            margin: 1.5cm;
-            size: auto;
-          }
-          body {
-            background-color: white !important;
-            margin: 0 !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
-
-      {/* Pulsanti di azione (nascosti in stampa) */}
-      <div className="max-w-[700px] w-full flex justify-between mb-6 no-print">
+    <div className="min-h-screen bg-slate-100 text-slate-900 print:bg-white print:p-0 p-6 flex flex-col items-center">
+      {/* Barra di controllo superiore (nascosta in stampa) */}
+      <div className="max-w-3xl w-full flex items-center justify-between mb-6 print:hidden">
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition shadow-2xs cursor-pointer"
         >
-          ← Indietro
+          <ArrowLeft className="w-4 h-4" /> Indietro
         </button>
+
         <button
           onClick={() => window.print()}
-          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition shadow-md cursor-pointer"
         >
-          🖨️ Stampa / Salva PDF
+          <Printer className="w-4 h-4" /> Stampa Certificato
         </button>
       </div>
 
-      {/* Foglio del Certificato con Doppia Cornice */}
-      <div className="max-w-[700px] w-full bg-white p-10 rounded-2xl shadow-md border border-slate-200 print:shadow-none print:border-none print:p-0 font-serif text-slate-900">
+      {/* Foglio del Certificato (Formato A4 ottimizzato per stampa) */}
+      <div className="max-w-3xl w-full bg-white border border-slate-200 print:border-none shadow-lg print:shadow-none p-12 rounded-2xl print:rounded-none relative space-y-8 font-serif">
         
-        <div style={{ border: '4px double #1e293b', padding: '35px', position: 'relative' }}>
-          
-          {/* Logo della Parrocchia (se presente) */}
-          {parrocchia?.logo_url && parrocchia.logo_url !== 'null' && parrocchia.logo_url.trim() !== '' && (
-            <div className="flex justify-center mb-3">
-              <img
-                src={parrocchia.logo_url}
-                alt="Logo Parrocchia"
-                className="w-16 h-16 object-contain"
-              />
-            </div>
-          )}
-
-          {/* Intestazione Parrocchia / Diocesi */}
-          <div className="text-center space-y-1">
-            <h2 className="uppercase tracking-[2px] text-sm font-bold text-slate-700">
-              {parrocchia?.nome_parrocchia || 'PARROCCHIA'}
-            </h2>
-            <p className="text-xs text-slate-500 font-sans">
-              {parrocchia?.diocesi || 'Arcidiocesi di Sassari'}
-            </p>
+        {/* Intestazione Parrocchia / Diocesi */}
+        <div className="text-center space-y-2 border-b border-slate-200 pb-6">
+          <div className="flex justify-center mb-2">
+            {parrocchia?.logo_url && parrocchia.logo_url !== '/logo.png' ? (
+              <img src={parrocchia.logo_url} alt="Logo" className="w-16 h-16 object-contain" />
+            ) : (
+              <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                <Church className="w-8 h-8" />
+              </div>
+            )}
           </div>
-
-          <h1 className="text-xl font-extrabold text-center uppercase tracking-wider my-6 text-slate-900">
-            ATTO DI BATTESIMO
+          <span className="text-[11px] font-sans font-bold tracking-widest text-blue-800 uppercase block">
+            {parrocchia?.diocesi || 'Arcidiocesi'}
+          </span>
+          <h1 className="text-xl font-extrabold text-slate-900 uppercase tracking-wide">
+            {parrocchia?.nome_parrocchia || 'Parrocchia'}
           </h1>
+        </div>
 
-          <p className="italic text-center text-sm text-slate-700 my-4">
-            Si certifica che nel Registro dei Battesimi di questa Parrocchia al N. <strong>{atto.numero_atto || '___'}</strong> risulta che
+        {/* Titolo del Certificato */}
+        <div className="text-center space-y-1 pt-4">
+          <h2 className="text-2xl font-extrabold uppercase tracking-widest text-slate-900">
+            CERTIFICATO DI BATTESIMO
+          </h2>
+          <p className="text-xs font-sans text-slate-500">
+            (Estratto dal Registro dei Battesimi)
+          </p>
+        </div>
+
+        {/* Corpo del Certificato */}
+        <div className="text-sm font-serif leading-loose text-slate-800 space-y-6 pt-4 px-4">
+          <p className="text-justify">
+            Si certifica che <strong>{atto.cognome} {atto.nome}</strong>, di sesso {atto.sesso === 'M' ? 'maschile' : 'femminile'}, 
+            nato/a a <span className="underline decoration-dotted underline-offset-4">{atto.luogo_nascita || '__________'}</span> il{' '}
+            <strong>{atto.data_nascita ? new Date(atto.data_nascita).toLocaleDateString('it-IT') : '__________'}</strong>,
+            figlio/a di <span className="underline decoration-dotted underline-offset-4">{atto.padre || '____________________'}</span> e di{' '}
+            <span className="underline decoration-dotted underline-offset-4">{atto.madre || '____________________'}</span>,
           </p>
 
-          <div className="text-center my-5">
-            <span className="text-xl font-bold uppercase tracking-wider border-b border-slate-300 pb-1 inline-block">
-              {atto.cognome} {atto.nome}
-            </span>
-          </div>
+          <p className="text-justify">
+            è stato/a battezzato/a in questa Chiesa Parrocchiale il giorno{' '}
+            <strong>{atto.data_battesimo ? new Date(atto.data_battesimo).toLocaleDateString('it-IT') : '__________'}</strong>{' '}
+            dal Rev. Ministro <span className="underline decoration-dotted underline-offset-4">{atto.ministro || '____________________'}</span>.
+          </p>
 
-          {/* Dettagli del Sacramento */}
-          <div className="text-left mx-auto my-6 space-y-3 text-sm leading-relaxed" style={{ width: '90%' }}>
-            <p><strong>Nato/a a:</strong> {atto.luogo_nascita || 'Sassari'} il {dataNascitaFormatted}</p>
-            <p><strong>Figlio/a di:</strong> {atto.padre || '________'} e di {atto.madre || '________'}</p>
-            <p><strong>È stato/a battezzato/a</strong> in questa Chiesa Parrocchiale in data <strong>{dataBattesimoFormatted}</strong>.</p>
-            <p><strong>Ministro celebrante:</strong> {atto.ministro || 'd. Massimiliano Salis'}</p>
-            {atto.padrino && <p><strong>Padrino:</strong> {atto.padrino}</p>}
-            {atto.madrina && <p><strong>Madrina:</strong> {atto.madrina}</p>}
-            
-            {/* Box Annotazioni Marginali Canoniche */}
-            <div className="mt-6 pt-3 border-t border-dashed border-slate-400 text-xs font-sans space-y-1">
-              <span className="font-bold uppercase tracking-wider text-slate-700 block mb-1">
-                Annotazioni Marginali (Can. 535 §2):
-              </span>
-              {annotazioniList.length > 0 ? (
-                annotazioniList.map((a) => (
-                  <p key={a.id} className="text-slate-700">
-                    <strong>[{a.tipo_annotazione.toUpperCase()}]</strong> {a.testo_annotazione} <em className="text-[10px] text-slate-500">(Data: {new Date(a.data_annotazione).toLocaleDateString('it-IT')})</em>
-                  </p>
-                ))
-              ) : atto.annotazioni ? (
-                <p className="text-slate-700">{atto.annotazioni}</p>
-              ) : (
-                <p className="text-slate-400 italic">Nessuna annotazione marginale</p>
-              )}
-            </div>
-          </div>
+          <p className="text-justify">
+            Dal predetto Registro risulta altresì che l&apos;atto è registrato al 
+            N. <strong className="underline">{atto.numero_atto || '____'}</strong>.
+          </p>
+        </div>
 
-          {/* Sezione Firma e Data */}
-          <div className="mt-12 pt-4 flex justify-between items-end text-xs font-sans">
-            <div>
-              <p>Data: <span className="font-semibold">{new Date().toLocaleDateString('it-IT')}</span></p>
-            </div>
-            <div className="text-right space-y-6">
-              <p className="font-serif italic text-sm">Il Parroco</p>
-              <div className="w-44 border-b border-slate-400 ml-auto"></div>
-            </div>
+        {/* Sezione Note / Annotazioni Marginali */}
+        <div className="pt-4 px-4 font-sans text-xs text-slate-600">
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 print:bg-transparent">
+            <span className="font-bold uppercase tracking-wider block mb-1 text-[10px] text-slate-400">Annotazioni Marginali (Cresima, Matrimonio, ecc.)</span>
+            <p className="italic text-slate-500">Nulla osta / Nessuna annotazione di rilievo.</p>
           </div>
+        </div>
 
+        {/* Data e Firma del Parroco */}
+        <div className="pt-12 flex justify-between items-end px-4 font-sans text-xs">
+          <div>
+            <p className="text-slate-500">Data rilascio: {new Date().toLocaleDateString('it-IT')}</p>
+          </div>
+          <div className="text-center space-y-8">
+            <p className="text-slate-400 text-[11px]">Il Parroco / Cancelliere</p>
+            <div className="w-48 border-b border-slate-400"></div>
+          </div>
         </div>
 
       </div>
     </div>
+  );
+}
+
+export default function CertificatoBattesimoPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">Caricamento in corso...</div>}>
+      <CertificatoBattesimoContent />
+    </Suspense>
   );
 }

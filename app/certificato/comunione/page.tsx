@@ -2,151 +2,198 @@
 
 export const dynamic = 'force-dynamic';
 
-
-
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { Printer, ArrowLeft, Church } from 'lucide-react';
 
-export default function CertificatoComunione() {
-  const searchParams = useSearchParams();
+interface ComunioneAtto {
+  id: string;
+  numero_atto: number | null;
+  nome: string;
+  cognome: string;
+  data_nascita: string;
+  luogo_nascita: string;
+  data_comunione: string;
+  luogo_comunione: string;
+  ministro: string;
+  padre: string;
+  madre: string;
+  parrocchia_id?: string;
+}
+
+interface Parrocchia {
+  nome_parrocchia: string;
+  diocesi: string;
+  logo_url?: string;
+}
+
+function CertificatoComunioneContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = searchParams.get('id');
 
-  const [atto, setAtto] = useState<any>(null);
-  const [parrocchia, setParrocchia] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [atto, setAtto] = useState<ComunioneAtto | null>(null);
+  const [parrocchia, setParrocchia] = useState<Parrocchia | null>(null);
 
   useEffect(() => {
-    if (id) fetchDatiCertificato();
+    if (id) {
+      fetchAttoEParrocchia(id);
+    } else {
+      setLoading(false);
+    }
   }, [id]);
 
-  async function fetchDatiCertificato() {
+  async function fetchAttoEParrocchia(attoId: string) {
     setLoading(true);
-    const { data: comunione } = await supabase
+    const { data: attoData, error: attoError } = await supabase
       .from('comunioni')
       .select('*')
-      .eq('id', id)
+      .eq('id', attoId)
       .single();
 
-    if (comunione) {
-      setAtto(comunione);
-      const { data: parr } = await supabase
+    if (attoError || !attoData) {
+      alert('Atto di prima comunione non trovato.');
+      setLoading(false);
+      return;
+    }
+
+    setAtto(attoData);
+
+    if (attoData.parrocchia_id) {
+      const { data: pData } = await supabase
         .from('parrocchie')
         .select('*')
-        .eq('id', comunione.parrocchia_id)
+        .eq('id', attoData.parrocchia_id)
         .single();
-      if (parr) setParrocchia(parr);
+      if (pData) setParrocchia(pData);
+    } else {
+      const { data: pFallback } = await supabase
+        .from('parrocchie')
+        .select('*')
+        .limit(1)
+        .single();
+      if (pFallback) setParrocchia(pFallback);
     }
+
     setLoading(false);
   }
 
-  if (loading) return <div className="p-8 text-center text-sm">Generazione certificato in corso...</div>;
-  if (!atto) return <div className="p-8 text-center text-sm text-red-500">Atto di Prima Comunione non trovato.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">
+        Caricamento dati certificato in corso...
+      </div>
+    );
+  }
 
-  const dataNascitaFormatted = atto.data_nascita ? new Date(atto.data_nascita).toLocaleDateString('it-IT') : '...................';
-  const dataBattesimoFormatted = atto.data_battesimo ? new Date(atto.data_battesimo).toLocaleDateString('it-IT') : '...................';
-  const dataComunioneFormatted = atto.data_comunione ? new Date(atto.data_comunione).toLocaleDateString('it-IT') : '...................';
+  if (!atto) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-700 gap-4">
+        <p className="text-sm">Nessun atto selezionato o record non trovato.</p>
+        <button
+          onClick={() => router.push('/?view=comunioni')}
+          className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition"
+        >
+          Torna al Registro
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-6 flex flex-col items-center">
-      
-      {/* Stile CSS globale per la stampa */}
-      <style jsx global>{`
-        @media print {
-          @page {
-            margin: 2cm;
-            size: auto;
-          }
-          body {
-            background-color: white !important;
-          }
-        }
-      `}</style>
-
-      {/* Pulsanti di azione (nascosti in stampa) */}
-      <div className="max-w-2xl w-full flex justify-between mb-6 print:hidden">
+    <div className="min-h-screen bg-slate-100 text-slate-900 print:bg-white print:p-0 p-6 flex flex-col items-center">
+      {/* Barra di controllo superiore (nascosta in stampa) */}
+      <div className="max-w-3xl w-full flex items-center justify-between mb-6 print:hidden">
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition shadow-2xs cursor-pointer"
         >
-          ← Indietro
+          <ArrowLeft className="w-4 h-4" /> Indietro
         </button>
+
         <button
           onClick={() => window.print()}
-          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition shadow-md cursor-pointer"
         >
-          🖨️ Stampa / Salva PDF
+          <Printer className="w-4 h-4" /> Stampa Certificato
         </button>
       </div>
 
-      {/* Foglio del Certificato */}
-      <div className="max-w-2xl w-full bg-white p-12 rounded-2xl shadow-md border border-slate-200 print:shadow-none print:border-none print:p-0 print:w-full font-serif">
+      {/* Foglio del Certificato (Formato A4 ottimizzato per stampa) */}
+      <div className="max-w-3xl w-full bg-white border border-slate-200 print:border-none shadow-lg print:shadow-none p-12 rounded-2xl print:rounded-none relative space-y-8 font-serif">
         
-        {/* Intestazione con Logo e Diocesi */}
+        {/* Intestazione Parrocchia / Diocesi */}
         <div className="text-center space-y-2 border-b border-slate-200 pb-6">
-          {parrocchia?.logo_url && (
-            <div className="flex justify-center mb-2">
-              <img
-                src={parrocchia.logo_url}
-                alt="Logo Parrocchia"
-                className="w-16 h-16 object-contain"
-              />
-            </div>
-          )}
-          <h2 className="text-xs font-bold uppercase tracking-widest text-emerald-600 font-sans">
+          <div className="flex justify-center mb-2">
+            {parrocchia?.logo_url && parrocchia.logo_url !== '/logo.png' ? (
+              <img src={parrocchia.logo_url} alt="Logo" className="w-16 h-16 object-contain" />
+            ) : (
+              <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                <Church className="w-8 h-8" />
+              </div>
+            )}
+          </div>
+          <span className="text-[11px] font-sans font-bold tracking-widest text-blue-800 uppercase block">
             {parrocchia?.diocesi || 'Arcidiocesi'}
-          </h2>
-          <h1 className="text-2xl font-extrabold text-slate-900">
+          </span>
+          <h1 className="text-xl font-extrabold text-slate-900 uppercase tracking-wide">
             {parrocchia?.nome_parrocchia || 'Parrocchia'}
           </h1>
-          <p className="text-[11px] text-slate-400 font-mono font-sans">{parrocchia?.codice}</p>
-          
-          <h3 className="text-lg font-bold text-slate-800 mt-6 uppercase tracking-wide">
-            ATTESTATO DI PRIMA COMUNIONE
-          </h3>
         </div>
 
-        {/* Testo Discorsivo dell'Attestato */}
-        <div className="py-8 text-slate-800 text-base leading-relaxed space-y-6 text-justify">
-          <p className="indent-8">
-            Si attesta che dai registri delle Prime Comunioni di questa Parrocchia 
-            {atto.volume ? ` (Volume ${atto.volume}` : ''}
-            {atto.pagina ? `, Pagina ${atto.pagina}` : ''}
-            {atto.numero_atto ? `, Atto N. ${atto.numero_atto}` : ''}) 
-            risulta che:
+        {/* Titolo del Certificato */}
+        <div className="text-center space-y-1 pt-4">
+          <h2 className="text-2xl font-extrabold uppercase tracking-widest text-slate-900">
+            CERTIFICATO DI PRIMA COMUNIONE
+          </h2>
+          <p className="text-xs font-sans text-slate-500">
+            (Estratto dal Registro delle Comunioni)
           </p>
-
-          <p className="font-bold text-center text-lg my-4 text-slate-900">
-            {atto.cognome} {atto.nome}
-          </p>
-
-          <p className="leading-loose">
-            nato/a a <span className="font-semibold underline decoration-dotted">{atto.luogo_nascita || '......................................'}</span> il <span className="font-semibold underline decoration-dotted">{dataNascitaFormatted}</span>, 
-            regolarmente battezzato/a nella Parrocchia di <span className="font-semibold">{atto.chiesa_battesimo || '......................................'}</span> in data <span className="font-semibold underline decoration-dotted">{dataBattesimoFormatted}</span>, 
-            ha ricevuto per la prima volta il Santissimo Sacramento dell'Eucaristia (Prima Comunione) in questa Chiesa Parrocchiale (o presso <span className="font-semibold">{atto.chiesa_comunione || parrocchia?.nome_parrocchia}</span>) in data <span className="font-semibold underline decoration-dotted">{dataComunioneFormatted}</span>.
-          </p>
-
-          {atto.ministro && (
-            <p className="text-sm text-slate-600 italic">
-              Ministro / Celebrante: {atto.ministro}
-            </p>
-          )}
         </div>
 
-        {/* Data, Timbro e Firma del Parroco */}
-        <div className="mt-14 pt-6 flex justify-between items-end text-xs font-sans text-slate-700">
+        {/* Corpo del Certificato */}
+        <div className="text-sm font-serif leading-loose text-slate-800 space-y-6 pt-4 px-4">
+          <p className="text-justify">
+            Si certifica che <strong>{atto.cognome} {atto.nome}</strong>, 
+            nato/a a <span className="underline decoration-dotted underline-offset-4">{atto.luogo_nascita || '__________'}</span> il{' '}
+            <strong>{atto.data_nascita ? new Date(atto.data_nascita).toLocaleDateString('it-IT') : '__________'}</strong>,
+            figlio/a di <span className="underline decoration-dotted underline-offset-4">{atto.padre || '____________________'}</span> e di{' '}
+            <span className="underline decoration-dotted underline-offset-4">{atto.madre || '____________________'}</span>,
+          </p>
+
+          <p className="text-justify">
+            ha amministrato per la prima volta il Santissimo Sacramento dell&apos;Eucaristia (Prima Comunione) in questa Chiesa Parrocchiale il giorno{' '}
+            <strong>{atto.data_comunione ? new Date(atto.data_comunione).toLocaleDateString('it-IT') : '__________'}</strong>.
+          </p>
+
+          <p className="text-justify">
+            Dal predetto Registro risulta altresì che l&apos;atto è registrato al 
+            N. <strong className="underline">{atto.numero_atto || '____'}</strong>.
+          </p>
+        </div>
+
+        {/* Data e Firma del Parroco */}
+        <div className="pt-16 flex justify-between items-end px-4 font-sans text-xs">
           <div>
-            <p>Data di rilascio: <span className="font-semibold">{new Date().toLocaleDateString('it-IT')}</span></p>
+            <p className="text-slate-500">Data rilascio: {new Date().toLocaleDateString('it-IT')}</p>
           </div>
-          <div className="text-center space-y-10">
-            <p className="font-serif italic text-sm">Il Parroco</p>
-            <div className="w-52 border-b border-slate-400"></div>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest">(Timbro e Firma)</p>
+          <div className="text-center space-y-8">
+            <p className="text-slate-400 text-[11px]">Il Parroco / Cancelliere</p>
+            <div className="w-48 border-b border-slate-400"></div>
           </div>
         </div>
 
       </div>
     </div>
+  );
+}
+
+export default function CertificatoComunionePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">Caricamento in corso...</div>}>
+      <CertificatoComunioneContent />
+    </Suspense>
   );
 }
