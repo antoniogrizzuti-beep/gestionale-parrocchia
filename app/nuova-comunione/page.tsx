@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { registraLog } from '@/lib/logger';
@@ -30,7 +32,7 @@ interface BattesimoSearchResult {
   luogo_battesimo: string;
 }
 
-export default function NuovaComunionePage() {
+function NuovaComunioneContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -311,8 +313,7 @@ export default function NuovaComunionePage() {
     );
   }
 
-  // BLOCCO DEFINITIVO DELL'ANAGRAFICA
-const isAnagraficaLocked = isViewMode || selectedFromBattesimi || Boolean(editId);
+  const isAnagraficaLocked = isViewMode || selectedFromBattesimi || Boolean(editId);
   return (
     <main className="min-h-screen bg-slate-50 p-6 md:p-12 text-slate-800">
       <div className="max-w-4xl mx-auto">
@@ -411,7 +412,7 @@ const isAnagraficaLocked = isViewMode || selectedFromBattesimi || Boolean(editId
 
                 {searchQuery.trim().length >= 2 && !isSearching && searchResults.length === 0 && !searchErrorMessage && (
                   <div className="mt-2 text-xs text-amber-700 font-medium">
-                    Nessun battezzato trovato con "{searchQuery}" nel registro parrocchiale. Puoi proseguire con l'inserimento manuale.
+                    Nessun battezzato trovato con &quot;{searchQuery}&quot; nel registro parrocchiale. Puoi proseguire con l&apos;inserimento manuale.
                   </div>
                 )}
 
@@ -611,7 +612,7 @@ const isAnagraficaLocked = isViewMode || selectedFromBattesimi || Boolean(editId
               />
             </div>
 
-            {/* NOTA A PIÈ DI PAGINA / CRONOLOGIA EVENTI (Riservata a Admin e Super Admin) */}
+            {/* NOTA A PIÈ DI PAGINA / CRONOLOGIA EVENTI */}
             {editId && cronologia.length > 0 && (userRole === 'super_admin' || userRole === 'admin') && (
               <div className="pt-4 border-t border-slate-100 text-xs text-slate-500 space-y-2">
                 <p className="font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -641,8 +642,6 @@ const isAnagraficaLocked = isViewMode || selectedFromBattesimi || Boolean(editId
 
             {/* Pulsanti Azione */}
             <div className="flex items-center justify-between gap-4 pt-6 border-t border-slate-100">
-              
-              {/* Tasto Genera PDF sempre visibile per atti salvati */}
               {editId && (
                 <button
                   type="button"
@@ -678,5 +677,13 @@ const isAnagraficaLocked = isViewMode || selectedFromBattesimi || Boolean(editId
         </div>
       </div>
     </main>
+  );
+}
+
+export default function NuovaComunionePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">Caricamento in corso...</div>}>
+      <NuovaComunioneContent />
+    </Suspense>
   );
 }

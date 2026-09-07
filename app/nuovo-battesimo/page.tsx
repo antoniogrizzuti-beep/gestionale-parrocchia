@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { registraLog } from '@/lib/logger';
@@ -31,7 +33,7 @@ import {
   Save,
 } from 'lucide-react';
 
-export default function NuovoBattesimoPage() {
+function NuovoBattesimoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -232,7 +234,6 @@ export default function NuovoBattesimoPage() {
       return;
     }
 
-    // Recupera in modo robusto i dati della parrocchia e del logo associati all'utente loggato
     const { data: { session } } = await supabase.auth.getSession();
     let parrocchiaInfo: any = null;
     if (session) {
@@ -607,7 +608,7 @@ export default function NuovoBattesimoPage() {
               </div>
             </div>
 
-            {/* SEZIONE 4: Annotazioni Marginali Guidate con Spunte (Visibile dopo il salvataggio dell'atto) */}
+            {/* SEZIONE 4: Annotazioni Marginali Guidate con Spunte */}
             {editId && (
               <div className="pt-4 border-t border-slate-200">
                 <div className="flex items-center justify-between mb-4">
@@ -756,7 +757,7 @@ export default function NuovoBattesimoPage() {
                       <div className="p-3 bg-white rounded-xl border border-blue-200 space-y-3">
                         <p className="text-xs font-bold text-blue-900 uppercase">Dettagli Ordinazione / Altro</p>
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-600 uppercase mb-1">Testo dell'annotazione</label>
+                          <label className="block text-[10px] font-semibold text-slate-600 uppercase mb-1">Testo dell&apos;annotazione</label>
                           <textarea
                             rows={2}
                             placeholder="Inserisci i dettagli canonici dell'ordinazione o del cambio di rito..."
@@ -881,5 +882,13 @@ export default function NuovoBattesimoPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function NuovoBattesimoPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm">Caricamento in corso...</div>}>
+      <NuovoBattesimoContent />
+    </Suspense>
   );
 }
